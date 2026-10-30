@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Тейват: Судьба семи</title>
+<style>
+:root {
+  --site-primary: #315d78;
+  --site-on-primary: #ffffff;
+  --site-secondary: #d7b77b;
+  --site-on-secondary: #302313;
+  --site-background: #dce9e8;
+  --site-on-background: #20313b;
+  --site-font-body: system-ui, sans-serif;
+  --site-font-heading: Georgia, serif;
+  --site-heading-scale: 1;
+  --site-spacing-scale: 1;
+  --site-radius-scale: 1;
+  --site-decoration-opacity: 1;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; width: 100%; min-height: 100%; font-family: var(--site-font-body); background: var(--site-background); color: var(--site-on-background); overscroll-behavior: none; }
+#app { width: 100%; min-height: 100dvh; background-color: var(--site-background); color: var(--site-on-background); border-radius: 0; overflow: hidden; }
+button { font: inherit; cursor: pointer; touch-action: manipulation; }
+.topbar { display:flex; justify-content:space-between; align-items:center; padding: calc(12px * var(--site-spacing-scale)) calc(16px * var(--site-spacing-scale)); background: var(--site-primary); color: var(--site-on-primary); }
+.brand { font-family: var(--site-font-heading); font-size: calc(19px * var(--site-heading-scale)); font-weight:700; letter-spacing:.04em; }
+.credit { font-size:12px; opacity:.88; }
+.screen { display:none; min-height: calc(100dvh - 48px); padding: 18px; }
+.screen.active { display:flex; flex-direction:column; }
+.hero { text-align:center; margin:auto 0 20px; }
+.hero h1 { font-family:var(--site-font-heading); font-size:clamp(27px,7vw,42px); line-height:1.08; margin:10px 0; color:#27485c; }
+.hero p { margin:8px auto; max-width:420px; line-height:1.5; }
+.seal { width:82px; height:82px; margin:auto; border:2px solid #c69e58; border-radius:50%; display:grid; place-items:center; font-size:42px; color:#c69e58; background:#f7f0dc; }
+.primary { border:0; border-radius:999px; background:var(--site-primary); color:white; padding:13px 22px; font-weight:700; box-shadow:0 4px 0 #1d4055; }
+.secondary { border:1px solid #9db3b8; border-radius:999px; background:#ffffffb8; color:#29485b; padding:11px 18px; }
+.actions { display:flex; flex-direction:column; gap:12px; width:min(100%,340px); margin:0 auto auto; }
+.note { font-size:11px; opacity:.7; text-align:center; margin-top:18px; }
+.characters { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; width:min(100%,520px); margin:12px auto 20px; }
+.char { border:2px solid #c4d4d3; border-radius:18px; padding:12px 8px; background:#f7fbf8; color:#253e4a; text-align:center; min-height:142px; }
+.char.selected { border-color:#c49b52; background:#fff4d8; box-shadow:0 0 0 2px #c49b5230; }
+.portrait { width:66px; height:66px; border-radius:50%; margin:0 auto 7px; display:grid; place-items:center; font-size:34px; background:linear-gradient(145deg,#d8e8eb,#f6e6c9); }
+.char strong { display:block; }
+.char small { color:#667b82; }
+.section-title { text-align:center; font-family:var(--site-font-heading); font-size:25px; margin:8px 0 0; }
+.game-wrap { display:flex; flex-direction:column; gap:10px; flex:1; }
+.hud { display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:12px; }
+.hp { height:9px; width:112px; border-radius:9px; background:#c8d5d2; overflow:hidden; display:inline-block; vertical-align:middle; margin-left:5px; }
+.hp span { display:block; height:100%; width:100%; background:#68a77a; transition:width .2s; }
+#world { width:100%; height:min(49vh,360px); min-height:220px; border-radius:18px; display:block; background:#a8d5d2; border:2px solid #9bb9b4; touch-action:none; }
+.controls { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:auto; padding:4px 0 12px; }
+.pad { width:116px; height:76px; display:flex; align-items:center; justify-content:space-between; }
+.control-btn { border:1px solid #9bb3b7; border-radius:50%; background:#f8fcf4e8; color:#294c5c; width:54px; height:54px; font-size:21px; font-weight:700; box-shadow:0 3px 0 #8fa8a9; }
+.right-controls { display:grid; grid-template-columns:repeat(2,58px); gap:8px; }
+.right-controls .control-btn { width:54px; height:54px; font-size:17px; }
+.control-btn:active, .primary:active { transform:translateY(2px); box-shadow:none; }
+.game-tip { text-align:center; font-size:11px; color:#587078; }
+.footer { text-align:center; font-size:10px; opacity:.65; padding:8px; }
+@media (orientation:portrait) { .rotate-hint { display:block; } }
+.rotate-hint { display:none; text-align:center; font-size:11px; color:#6c7779; }
+@media (max-height:650px) { .screen { padding:10px; } #world { height:42vh; min-height:180px; } .char { min-height:120px; } }
+.topbar { background:linear-gradient(110deg,#172e4a,#315d78 55%,#527f91); box-shadow:0 4px 18px #18364a35; }
+.brand { text-shadow:0 2px 8px #081b2c80; }
+.screen { background:radial-gradient(ellipse at 50% 0%,#ffffffb8,transparent 65%); }
+.primary { background:linear-gradient(110deg,#315d78,#477f91); box-shadow:0 4px 0 #1d4055,0 8px 20px #315d7830; }
+.char { transition:transform .18s,border-color .18s,box-shadow .18s; box-shadow:0 5px 16px #365c6410; }
+.char:active { transform:scale(.97); }
+.portrait { box-shadow:inset 0 0 0 2px #ffffffa0,0 4px 12px #315d7820; }
+#world { border:2px solid #f7f0dc; box-shadow:0 10px 28px #315d7830; }
+.control-btn { background:linear-gradient(145deg,#fffef7,#dce9e8); border-color:#9bb9b4; box-shadow:0 4px 0 #78999a,0 5px 12px #294c5c20; }
+.hud { padding:9px 12px; border-radius:14px; background:#ffffffb8; box-shadow:0 3px 12px #315d7818; font-weight:700; }
+.game-tip { padding:7px; border-radius:10px; background:#ffffffa8; }
+.footer { background:#ffffff50; }
+.characters { gap:14px; }
+.char { position:relative; overflow:hidden; min-height:190px; padding:12px 8px 14px; background:linear-gradient(160deg,#fffdf5,#e7f0ed); border-color:#d6c8a8; }
+.char::before { content:""; position:absolute; inset:0 0 auto; height:5px; background:var(--hero-color,#c7a66c); }
+.portrait { position:relative; width:100px; height:112px; border-radius:48% 48% 18px 18px; margin:2px auto 10px; overflow:hidden; background:radial-gradient(circle at 50% 28%,#fff9e9 0 24%,transparent 25%),linear-gradient(145deg,#d9e8ed,#f5e6cc); box-shadow:inset 0 -12px 20px #324f5b20,0 6px 16px #29485b20; font-size:0; }
+.portrait::before { content:""; position:absolute; z-index:2; width:43px; height:49px; left:29px; top:24px; border-radius:46% 46% 42% 42%; background:linear-gradient(90deg,#f2c9a9,#ffe0c4 48%,#e9b997); box-shadow:0 0 0 2px #fff5e8; }
+.portrait::after { content:""; position:absolute; z-index:3; width:57px; height:42px; left:22px; top:14px; border-radius:65% 55% 28% 22%; background:var(--hair,#d8c49a); clip-path:polygon(0 0,100% 0,88% 65%,72% 44%,62% 100%,48% 57%,28% 94%,18% 55%,0 72%); filter:drop-shadow(0 2px 1px #263b4a55); }
+.portrait span { position:absolute; z-index:4; top:47px; left:0; width:100%; color:#39404a; font-size:8px; letter-spacing:7px; text-align:center; }
+.portrait i { position:absolute; z-index:1; left:16px; bottom:-12px; width:68px; height:60px; border-radius:45% 45% 0 0; background:var(--outfit,#426c8c); border:3px solid #f7e9d2; }
+.char[data-name="Эфир"] { --hero-color:#d4b56f; }
+.char[data-name="Эфир"] .portrait { --hair:#e4c77e; --outfit:#c9a96a; }
+.char[data-name="Люмин"] { --hero-color:#e5c77c; }
+.char[data-name="Люмин"] .portrait { --hair:#e9d79a; --outfit:#e7d7b4; }
+.char[data-name="Фурина"] { --hero-color:#579bc4; }
+.char[data-name="Фурина"] .portrait { --hair:#dce8f4; --outfit:#315b91; }
+.char[data-name="Странник"] { --hero-color:#6c9bc4; }
+.char[data-name="Странник"] .portrait { --hair:#273e65; --outfit:#3c6e91; }
+.char.selected { border-color:#c49b52; box-shadow:0 0 0 2px #c49b5230,0 8px 20px #8e774533; }
+@media (max-height:650px) { .char { min-height:145px; } .portrait { height:78px; width:76px; } }
+/* Расширенный игровой интерфейс */
+.screen.active#hub{display:block;overflow:auto;padding-bottom:30px;background:linear-gradient(145deg,#e8f0e9,#d5e5e7)}
+.profilebar{display:flex;align-items:center;gap:12px;padding:14px;border-radius:18px;background:linear-gradient(120deg,#203c58,#426e83);color:white;box-shadow:0 8px 22px #203c5830}
+.avatar{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(145deg,#f8e6b7,#a8cbd0);font-size:28px;border:2px solid #e7c77e}
+.profilebar small{display:block;opacity:.8}.profilebar strong{font-size:17px}
+.hubstats{margin-left:auto;text-align:right;font-size:12px;line-height:1.8}
+.hubgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:16px 0}
+.hubcard{min-height:105px;text-align:left;border:1px solid #c5d6d2;border-radius:16px;padding:13px;background:linear-gradient(145deg,#fffdf6,#e8f0eb);color:#29485b;box-shadow:0 5px 14px #29485b12}
+.hubcard b{display:block;font-size:15px;margin:5px 0}.hubcard span{font-size:25px}.hubcard small{color:#61777d}
+.panel{padding:15px;border-radius:17px;background:#ffffffc9;border:1px solid #d2dfd8;margin:12px 0}
+.panel h3{margin:0 0 10px;color:#315d78}.wide{width:100%;margin:5px 0}.regionlist,.itemlist{display:grid;gap:9px}
+.region{display:flex;align-items:center;gap:12px;text-align:left;padding:12px;border-radius:13px;border:1px solid #cbd9d2;background:#f9fbf5;color:#29485b}.region.active{border:2px solid #c49b52;background:#fff4d8}.region span{font-size:26px}.region small{display:block;color:#667b82}
+.tag{display:inline-block;padding:3px 8px;border-radius:20px;background:#e2eee8;font-size:11px;margin:3px}
+.item{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:10px;border-radius:12px;background:#f5f8f3;border:1px solid #dbe4dc}.item button{border:1px solid #b9c9c4;border-radius:10px;padding:7px 10px;background:#fff;color:#315d78}
+.barline{height:9px;border-radius:9px;background:#d7e1dc;overflow:hidden}.barline i{display:block;height:100%;background:linear-gradient(90deg,#67a77d,#c5d889)}
+.modalshade{position:fixed;inset:0;z-index:20;background:#142c3c99;display:none;align-items:center;justify-content:center;padding:18px}.modalshade.open{display:flex}.modalbox{width:min(100%,460px);max-height:85dvh;overflow:auto;background:#f8f5e9;border:2px solid #c69e58;border-radius:20px;padding:18px;box-shadow:0 18px 50px #10253670}.modalbox h2{margin-top:0;color:#315d78}.muted{color:#6b7d7d;font-size:12px}
+.gamehudbtn{border:0;border-radius:10px;padding:7px 10px;background:#e6eee8;color:#315d78}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="topbar"><div class="brand">✦ ТЕЙВАТ: СУДЬБА СЕМИ</div><div class="credit">Разработчик: Тома</div></header>
+  <main>
+    <section id="home" class="screen active">
+      <div class="hero">
+        <div class="seal">✧</div>
+        <h1>Тейват: Судьба семи</h1>
+        <p>Новое приключение начинается в городе свободы — Мондштадте.</p>
+      </div>
+      <div class="actions">
+        <button class="primary" id="start">Начать приключение</button>
+        <button class="secondary" id="about">Об игре</button>
+      </div>
+      <div class="note">Фанатский неофициальный браузерный прототип</div>
+    </section>
+    <section id="choose" class="screen">
+      <h2 class="section-title">Выбери героя</h2>
+      <p style="text-align:center;margin:6px 0;color:#61777d">Кем отправимся исследовать Мондштадт?</p>
+      <div class="characters">
+        <button class="char selected" data-name="Эфир" data-element="Адаптивная стихия"><span class="portrait"><i></i><span>• •</span></span><strong>Эфир</strong><small>Путешественник · Анемо</small></button>
+        <button class="char" data-name="Люмин" data-element="Адаптивная стихия"><span class="portrait"><i></i><span>• •</span></span><strong>Люмин</strong><small>Путешественница · Гео</small></button>
+        <button class="char" data-name="Фурина" data-element="Гидро"><span class="portrait"><i></i><span>• •</span></span><strong>Фурина</strong><small>Гидро · Фонтейн</small></button>
+        <button class="char" data-name="Странник" data-element="Анемо"><span class="portrait"><i></i><span>• •</span></span><strong>Странник</strong><small>Анемо · Сумеру</small></button>
+      </div>
+      <div class="actions" style="margin-top:auto"><button class="primary" id="confirm">Войти в Мондштадт</button><button class="secondary" id="back">Назад</button></div>
+    </section>
+    <section id="game" class="screen">
+      <div class="game-wrap">
+        <div class="hud"><span id="heroLabel">Эфир · Мондштадт</span><span>❤ <span class="hp"><span id="health"></span></span></span><span id="score">✦ 0</span></div>
+        <canvas id="world" width="900" height="420" aria-label="Игровая локация Мондштадт"></canvas>
+        <div class="game-tip">Собирай светящиеся искры и нажимай «Атака», чтобы прогнать слаймов.</div>
+        <div class="controls">
+          <div class="pad"><button class="control-btn" id="left" aria-label="Влево">◀</button><button class="control-btn" id="right" aria-label="Вправо">▶</button></div>
+          <div class="right-controls"><button class="control-btn" id="jump">↥</button><button class="control-btn" id="attack">⚔</button><button class="control-btn" id="skill">✧</button><button class="control-btn" id="menu">Ⅱ</button></div>
+        </div>
+        <div class="rotate-hint">Поверни телефон горизонтально для удобной игры.</div>
+      </div>
+    </section>
+    <section id="hub" class="screen">
+      <div class="profilebar"><div class="avatar" id="profileAvatar">⚔️</div><div><small>Профиль путешественника</small><strong id="profileName">Тома</strong><div><span class="tag">Ранг приключений 1</span></div></div><div class="hubstats">✦ <b id="hubCoins">0</b><br>Уровень <b id="hubLevel">1</b></div></div>
+      <div class="hubgrid">
+        <button class="hubcard" data-panel="worldPanel"><span>🗺️</span><b>Карта Тейвата</b><small>Регионы и путешествия</small></button>
+        <button class="hubcard" data-panel="heroesPanel"><span>🧙</span><b>Персонажи</b><small>Уровни и способности</small></button>
+        <button class="hubcard" data-panel="artifactsPanel"><span>💠</span><b>Артефакты</b><small>Экипировка и бонусы</small></button>
+        <button class="hubcard" data-panel="bagPanel"><span>🎒</span><b>Инвентарь</b><small>Ресурсы и предметы</small></button>
+        <button class="hubcard" data-panel="questsPanel"><span>📜</span><b>Задания</b><small>История и поручения</small></button>
+        <button class="hubcard" data-panel="battlePanel"><span>⚔️</span><b>Сражения</b><small>Арена и тренировка</small></button>
+      </div>
+      <div class="panel"><h3>Продолжить приключение</h3><p id="currentRegionText">Ты находишься в Мондштадте.</p><button class="primary wide" id="exploreBtn">Исследовать регион</button></div>
+      <div class="panel"><h3>Сетевой режим</h3><p>Сейчас доступна одиночная игра на устройстве. Для настоящих игроков понадобится подключённый игровой сервер.</p><button class="secondary wide" id="onlineInfo">Подробнее об онлайне</button></div>
+    </section>
+  </main>
+  <div class="footer">Фанатский проект по мотивам Genshin Impact · Не связан с HoYoverse</div>
+</div>
+<div class="modalshade" id="featureModal"><div class="modalbox"><button class="secondary" id="closeModal">Закрыть</button><div id="modalContent"></div></div></div>
+<script>
+const screens = [...document.querySelectorAll('.screen')];
+function show(id){ screens.forEach(s=>s.classList.toggle('active',s.id===id)); }
+document.getElementById('start').onclick=()=>show('choose');
+document.getElementById('back').onclick=()=>show('home');
+document.getElementById('about').onclick=()=>alert('Фанатский прототип: 2D-приключение с видом сбоку, выбором героя и боями в реальном времени.');
+let chosen='Эфир', element='Адаптивная стихия';
+document.querySelectorAll('.char').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.char').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');chosen=btn.dataset.name;element=btn.dataset.element;});
+document.getElementById('confirm').onclick=()=>{document.getElementById('heroLabel').textContent=chosen+' · Мондштадт';show('game');draw();};
+document.getElementById('menu').onclick=()=>show('choose');
+// Backup navigation handlers for touch screens and embedded previews
+document.addEventListener('click', event => {
+  const button = event.target.closest('button');
+  if (!button) return;
+  if (button.id === 'start') show('choose');
+  if (button.id === 'back') show('home');
+  if (button.id === 'about') alert('Фанатский прототип: 2D-приключение в Мондштадте.');
+  if (button.id === 'confirm') {
+    document.getElementById('heroLabel').textContent = chosen + ' · Мондштадт';
+    show('game');
+    draw();
+  }
+});
+const canvas=document.getElementById('world'),ctx=canvas.getContext('2d');
+let x=130,y=300,vy=0,ground=true,score=0,attackFlash=0,skillFlash=0,slimes=[{x:610,y:330,alive:true},{x:790,y:330,alive:true}],keys={};
+function rounded(x,y,w,h,r,color){ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill();}
+function draw(){
+ ctx.clearRect(0,0,900,420);
+ let sky=ctx.createLinearGradient(0,0,0,420);sky.addColorStop(0,'#9bd4dc');sky.addColorStop(1,'#e5edcf');ctx.fillStyle=sky;ctx.fillRect(0,0,900,420);
+ ctx.fillStyle='#f7e8ad';ctx.beginPath();ctx.arc(745,78,34,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle='#86b9a2';ctx.beginPath();ctx.moveTo(0,250);ctx.lineTo(150,115);ctx.lineTo(300,250);ctx.lineTo(450,120);ctx.lineTo(620,255);ctx.lineTo(760,145);ctx.lineTo(900,250);ctx.lineTo(900,420);ctx.lineTo(0,420);ctx.fill();
+ ctx.fillStyle='#6d9c7c';ctx.fillRect(0,350,900,70);
+ // Mondstadt windmills and rooftops
+ rounded(42,235,112,115,8,'#e9d8b5');ctx.fillStyle='#a95f4d';ctx.beginPath();ctx.moveTo(25,240);ctx.lineTo(98,185);ctx.lineTo(170,240);ctx.fill();
+ rounded(705,238,118,112,8,'#eadbbd');ctx.fillStyle='#a95f4d';ctx.beginPath();ctx.moveTo(690,243);ctx.lineTo(765,190);ctx.lineTo(840,243);ctx.fill();
+ ctx.strokeStyle='#f6f0d8';ctx.lineWidth=7;ctx.beginPath();ctx.moveTo(480,80);ctx.lineTo(480,220);ctx.stroke();ctx.beginPath();ctx.moveTo(420,150);ctx.lineTo(540,150);ctx.stroke();
+ // path
+ ctx.fillStyle='#c9b88e';ctx.fillRect(0,350,900,13);
+ // collectibles
+ for(let i=0;i<4;i++){let sx=260+i*150; if(!window.collected?.includes(i)){ctx.fillStyle='#fff1a1';ctx.beginPath();ctx.arc(sx,320+Math.sin(Date.now()/350+i)*5,9,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();}}
+ // slimes
+ slimes.forEach(s=>{if(!s.alive)return;ctx.fillStyle='#78c9bd';ctx.beginPath();ctx.ellipse(s.x,337,23,17,0,Math.PI,Math.PI*2);ctx.lineTo(s.x+23,337);ctx.fill();ctx.fillStyle='#254e58';ctx.fillRect(s.x-9,326,4,5);ctx.fillRect(s.x+6,326,4,5);});
+ // hero shadow and simple original chibi figure
+ ctx.fillStyle='#456c60';ctx.beginPath();ctx.ellipse(x,352,23,6,0,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle=chosen==='Фурина'?'#294c83':chosen==='Странник'?'#3e6c91':'#c5a36b';ctx.fillRect(x-12,y-30,24,30);
+ ctx.fillStyle='#f0d0ad';ctx.beginPath();ctx.arc(x,y-42,13,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle=chosen==='Фурина'?'#263d75':chosen==='Странник'?'#263c68':'#d8c6a4';ctx.beginPath();ctx.arc(x,y-47,14,Math.PI,Math.PI*2);ctx.fill();
+ if(attackFlash>0){ctx.strokeStyle='#fff5bd';ctx.lineWidth=8;ctx.beginPath();ctx.arc(x+18,y-30,35,-.8,.8);ctx.stroke();attackFlash--;}
+ if(skillFlash>0){ctx.strokeStyle='#b8f5ef';ctx.lineWidth=5;ctx.beginPath();ctx.arc(x,y-27,52,0,Math.PI*2);ctx.stroke();skillFlash--;}
+ ctx.fillStyle='#294b50';ctx.font='bold 14px system-ui';ctx.textAlign='center';ctx.fillText(chosen,x,390);
+ requestAnimationFrame(draw);
+}
+window.collected=[];
+function update(){ if(keys.left)x=Math.max(25,x-4);if(keys.right)x=Math.min(875,x+4);y+=vy;vy+=.65;if(y>=300){y=300;vy=0;ground=true;}else ground=false;
+ [260,410,560,710].forEach((sx,i)=>{if(!collected.includes(i)&&Math.abs(x-sx)<20&&Math.abs(y-300)<35){collected.push(i);score++;document.getElementById('score').textContent='✦ '+score;}});
+ requestAnimationFrame(update);}
+function press(id,down){const b=document.getElementById(id);b.addEventListener('pointerdown',e=>{e.preventDefault();down();});}
+press('left',()=>keys.left=true);press('right',()=>keys.right=true);
+['left','right'].forEach(id=>{document.getElementById(id).addEventListener('pointerup',()=>keys[id]=false);document.getElementById(id).addEventListener('pointerleave',()=>keys[id]=false);document.getElementById(id).addEventListener('pointercancel',()=>keys[id]=false);});
+document.getElementById('jump').onclick=()=>{if(ground){vy=-12;ground=false;}};
+document.getElementById('attack').onclick=()=>{attackFlash=10;slimes.forEach(s=>{if(s.alive&&Math.abs(s.x-x)<85)s.alive=false;});};
+document.getElementById('skill').onclick=()=>{skillFlash=18;slimes.forEach(s=>{if(s.alive&&Math.abs(s.x-x)<125)s.alive=false;});};
+document.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'||e.key==='a')keys.left=true;if(e.key==='ArrowRight'||e.key==='d')keys.right=true;if(e.key===' '&&ground){vy=-12;ground=false;}});
+document.addEventListener('keyup',e=>{if(e.key==='ArrowLeft'||e.key==='a')keys.left=false;if(e.key==='ArrowRight'||e.key==='d')keys.right=false;});
+update();
+</script>
+<script>
+// Расширенная версия: живые противники, здоровье, задания и эффекты.
+(() => {
+  const oldDraw = draw;
+  draw = function() {
+    oldDraw();
+    slimes.forEach(s => {
+      if (!s.alive) return;
+      ctx.fillStyle = '#244b55'; ctx.fillRect(s.x-20, s.y-30, 40, 5);
+      ctx.fillStyle = '#f1a36e'; ctx.fillRect(s.x-20, s.y-30, 40*(s.hp||2)/2, 5);
+    });
+    if (skillFlash > 0) {
+      ctx.fillStyle = '#e9ffff'; ctx.globalAlpha = .18;
+      ctx.beginPath(); ctx.arc(x,y-28,62,0,Math.PI*2); ctx.fill(); ctx.globalAlpha = 1;
+    }
+  };
+  let life = 100, frame = 0, gameEnded = false;
+  const healthBar = document.getElementById('health');
+  healthBar.style.width = '100%';
+  healthBar.style.background = 'linear-gradient(90deg,#54b77c,#9bdc91)';
+  const tip = document.querySelector('.game-tip');
+  tip.textContent = 'Задание: собери 4 анемо-искры и победи слаймов. Используй прыжок, атаку и навык!';
+  slimes.forEach(s => { s.hp = 2; s.speed = .7 + Math.random()*.35; });
+  const oldUpdate = update;
+  update = function() {
+    oldUpdate();
+    if (!document.getElementById('game').classList.contains('active') || gameEnded) return;
+    frame++;
+    slimes.forEach(s => {
+      if (!s.alive) return;
+      if (Math.abs(s.x-x) < 260) s.x += Math.sign(x-s.x)*s.speed;
+      if (frame%45===0 && Math.abs(s.x-x)<34 && y>=285) {
+        life = Math.max(0,life-8); healthBar.style.width = life+'%';
+        healthBar.style.background = life<30?'#d65e62':'linear-gradient(90deg,#54b77c,#9bdc91)';
+      }
+    });
+    if (life<=0) finish('Путешествие приостановлено', 'Попробуй ещё раз — Мондштадт ждёт!');
+    if (collected.length===4 && slimes.every(s=>!s.alive)) finish('Задание выполнено!', 'Ты собрал все искры и победил слаймов. Мондштадт спасён!');
+  };
+  const oldAttack = document.getElementById('attack').onclick;
+  document.getElementById('attack').onclick = () => {
+    attackFlash=12;
+    slimes.forEach(s=>{ if(s.alive && Math.abs(s.x-x)<95){ s.hp--; if(s.hp<=0)s.alive=false; } });
+  };
+  document.getElementById('skill').onclick = () => {
+    skillFlash=20;
+    slimes.forEach(s=>{ if(s.alive && Math.abs(s.x-x)<145){ s.hp-=2; if(s.hp<=0)s.alive=false; } });
+  };
+  function finish(title, message) {
+    if (gameEnded) return; gameEnded=true;
+    const panel=document.createElement('div');
+    panel.style.cssText='position:absolute;inset:12%;z-index:5;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:14px;padding:22px;text-align:center;background:#f8f3e7f2;border:2px solid #c69e58;border-radius:22px;box-shadow:0 12px 40px #142c3c70';
+    panel.innerHTML='<h2 style="margin:0;color:#27485c">'+title+'</h2><p>'+message+'</p><button class="primary" id="again">Играть снова</button>';
+    document.getElementById('game').appendChild(panel);
+    panel.querySelector('#again').onclick=()=>location.reload();
+  }
+  document.getElementById('confirm').addEventListener('click',()=>{life=100;gameEnded=false;healthBar.style.width='100%';});
+})();
+</script>
+<script>
+// Новая иллюстрированная карта и более детальные игровые персонажи.
+(() => {
+ const c=document.getElementById('world'), g=c.getContext('2d');
+ const oldChosen=()=>chosen;
+ function cloud(x,y,s){g.fillStyle='#ffffffb8';g.beginPath();g.arc(x,y,18*s,0,Math.PI*2);g.arc(x+20*s,y-8*s,23*s,0,Math.PI*2);g.arc(x+43*s,y,17*s,0,Math.PI*2);g.fill();}
+ function tree(x,y,s){g.fillStyle='#765b48';g.fillRect(x-5*s,y-35*s,10*s,38*s);g.fillStyle='#477f67';for(let k=0;k<3;k++){g.beginPath();g.arc(x,y-38*s-k*15*s,20*s-k*2*s,0,Math.PI*2);g.fill();}}
+ function person(px,base,name){
+  const fur=name==='Фурина', wander=name==='Странник', lumine=name==='Люмин';
+  const coat=fur?'#315b91':wander?'#355b83':lumine?'#e6d7b3':'#c5a66d';
+  const hair=fur?'#e7edf5':wander?'#263b64':lumine?'#e7d49a':'#dfc47d';
+  g.save();g.translate(px,base);
+  g.fillStyle='#294d4a55';g.beginPath();g.ellipse(0,2,19,5,0,0,Math.PI*2);g.fill();
+  g.fillStyle=coat;g.beginPath();g.moveTo(-12,-39);g.lineTo(12,-39);g.lineTo(18,0);g.lineTo(-17,0);g.closePath();g.fill();
+  g.fillStyle='#f0c9a9';g.beginPath();g.ellipse(0,-51,11,14,0,0,Math.PI*2);g.fill();
+  g.fillStyle=hair;g.beginPath();g.arc(0,-57,13,Math.PI,Math.PI*2);g.lineTo(12,-45);g.lineTo(7,-51);g.lineTo(1,-43);g.lineTo(-4,-52);g.lineTo(-12,-46);g.closePath();g.fill();
+  g.fillStyle='#34465b';g.fillRect(-6,-53,2,2);g.fillRect(4,-53,2,2);
+  g.strokeStyle='#f5e8c9';g.lineWidth=3;g.beginPath();g.moveTo(-8,-35);g.lineTo(-15,-15);g.moveTo(8,-35);g.lineTo(15,-15);g.stroke();
+  if(fur){g.fillStyle='#4e9bc2';g.fillRect(-15,-76,30,4);g.fillRect(-11,-81,22,5);}
+  if(wander){g.fillStyle='#315b88';g.beginPath();g.ellipse(0,-72,23,5,0,0,Math.PI*2);g.fill();g.fillRect(-3,-91,6,20);}
+  if(lumine){g.fillStyle='#f5e8bd';g.beginPath();g.arc(-14,-58,5,0,Math.PI*2);g.arc(14,-58,5,0,Math.PI*2);g.fill();}
+  g.restore();
+ }
+ function render(){
+  const t=Date.now()/1000;g.clearRect(0,0,900,420);
+  const sky=g.createLinearGradient(0,0,0,420);sky.addColorStop(0,'#72b8dc');sky.addColorStop(.62,'#d9e9e5');sky.addColorStop(1,'#f4e4c4');g.fillStyle=sky;g.fillRect(0,0,900,420);
+  g.fillStyle='#fff0bf';g.beginPath();g.arc(735,73,32,0,Math.PI*2);g.fill();cloud(130,75,1);cloud(420,112,.7);
+  g.fillStyle='#789f9b';g.beginPath();g.moveTo(0,265);g.lineTo(130,140);g.lineTo(245,245);g.lineTo(390,115);g.lineTo(540,255);g.lineTo(700,125);g.lineTo(900,255);g.lineTo(900,420);g.lineTo(0,420);g.fill();
+  g.fillStyle='#a7c7ad';g.beginPath();g.moveTo(0,300);g.lineTo(170,205);g.lineTo(300,290);g.lineTo(470,190);g.lineTo(620,300);g.lineTo(790,205);g.lineTo(900,280);g.lineTo(900,420);g.lineTo(0,420);g.fill();
+  // Город Мондштадт вдали: стены, башни, красные крыши и окна.
+  g.fillStyle='#e7d8b8';g.fillRect(250,225,420,130);g.fillRect(310,190,70,165);g.fillRect(520,175,78,180);
+  for(let i=0;i<7;i++){let bx=270+i*55;g.fillStyle=i%2?'#bd765c':'#a85f51';g.beginPath();g.moveTo(bx-7,230);g.lineTo(bx+19,204);g.lineTo(bx+45,230);g.fill();g.fillStyle='#f6e7bd';g.fillRect(bx+10,258,13,24);}
+  g.fillStyle='#d9c49d';g.fillRect(0,325,900,95);g.fillStyle='#9cbd91';g.fillRect(0,315,900,18);
+  // Каменная дорожка с перспективой.
+  g.fillStyle='#c7b18c';g.beginPath();g.moveTo(300,420);g.lineTo(390,318);g.lineTo(520,318);g.lineTo(650,420);g.fill();
+  g.strokeStyle='#ad9878';g.lineWidth=2;for(let i=0;i<5;i++){let yy=340+i*20;g.beginPath();g.moveTo(365-i*14,yy);g.lineTo(550+i*19,yy);g.stroke();}
+  tree(80,333,1.3);tree(205,337,.9);tree(800,337,1.25);tree(875,335,.8);
+  // Ветряная мельница.
+  g.fillStyle='#f0dfbd';g.fillRect(690,190,42,140);g.fillStyle='#a75e50';g.beginPath();g.moveTo(680,195);g.lineTo(711,162);g.lineTo(743,195);g.fill();
+  g.save();g.translate(711,178);g.rotate(t*.15);g.strokeStyle='#f8f0d8';g.lineWidth=7;for(let i=0;i<4;i++){g.rotate(Math.PI/2);g.beginPath();g.moveTo(0,0);g.lineTo(0,-76);g.stroke();g.fillStyle='#f8f0d8';g.fillRect(-8,-76,16,28);}g.restore();
+  // Цветы и искры.
+  for(let i=0;i<18;i++){let fx=(i*53+27)%890,fy=315+(i%3)*9;g.fillStyle=i%2?'#f4d47c':'#e8a6a5';g.beginPath();g.arc(fx,fy,3,0,Math.PI*2);g.fill();}
+  for(let i=0;i<4;i++){let sx=260+i*150;if(!collected.includes(i)){g.save();g.translate(sx,296+Math.sin(t*2+i)*6);g.rotate(Math.PI/4);g.fillStyle='#e7ffff';g.shadowColor='#8ff6ed';g.shadowBlur=15;g.fillRect(-7,-7,14,14);g.restore();}}
+  slimes.forEach(s=>{if(!s.alive)return;g.fillStyle='#4e9f9b';g.beginPath();g.ellipse(s.x,321,22,17,0,Math.PI,Math.PI*2);g.lineTo(s.x+22,321);g.fill();g.fillStyle='#f5ffff';g.fillRect(s.x-10,313,7,8);g.fillRect(s.x+4,313,7,8);g.fillStyle='#244d5a';g.fillRect(s.x-7,316,3,4);g.fillRect(s.x+7,316,3,4);});
+  person(x,318,oldChosen());
+  if(attackFlash>0){g.strokeStyle='#fff3c4';g.lineWidth=7;g.beginPath();g.arc(x+12,275,38,-.9,.8);g.stroke();attackFlash--;}
+  if(skillFlash>0){g.strokeStyle='#9df5f0';g.lineWidth=4;g.shadowColor='#b7ffff';g.shadowBlur=15;g.beginPath();g.arc(x,270,55,0,Math.PI*2);g.stroke();g.shadowBlur=0;skillFlash--;}
+  requestAnimationFrame(render);
+ }
+ draw=render;
+})();
+</script>
+<script>
+// Игровой профиль, прокачка и сохранение прогресса на устройстве.
+(() => {
+  const KEY = 'teyvat_fate_seven_save_v1';
+  const defaults = { hero: 'Эфир', level: 1, xp: 0, coins: 0, sparks: 0, wins: 0, potions: 2, weapon: 'Учебный меч', artifact: 'Перо странника', region: 'Мондштадт', quests: [] };
+  let save;
+  try { save = { ...defaults, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; }
+  catch (_) { save = { ...defaults }; }
+  const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (_) {} };
+  const modal = document.getElementById('featureModal');
+  const content = document.getElementById('modalContent');
+  const esc = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  function refresh() {
+    document.getElementById('profileName').textContent = save.hero;
+    document.getElementById('profileAvatar').textContent = ({'Эфир':'⚔️','Люмин':'🌟','Фурина':'💧','Странник':'🍃'})[save.hero] || '⚔️';
+    document.getElementById('hubCoins').textContent = save.coins;
+    document.getElementById('hubLevel').textContent = save.level;
+    document.getElementById('currentRegionText').textContent = 'Ты находишься в регионе: ' + save.region + '.';
+    document.querySelector('.profilebar .tag').textContent = 'Ранг приключений ' + Math.max(1, Math.floor((save.level + 1) / 2));
+  }
+  function open(title, html) { content.innerHTML = '<h2>' + title + '</h2>' + html; modal.classList.add('open'); }
+  function gainXP(amount) {
+    save.xp += amount;
+    while (save.xp >= save.level * 50) { save.xp -= save.level * 50; save.level++; save.coins += 25; }
+    persist(); refresh();
+  }
+  document.getElementById('closeModal').onclick = () => modal.classList.remove('open');
+  modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('open'); });
+  document.querySelectorAll('.hubcard').forEach(card => card.addEventListener('click', () => {
+    const panel = card.dataset.panel;
+    if (panel === 'heroesPanel') open('Персонажи', '<p><b>' + esc(save.hero) + '</b> · уровень ' + save.level + '</p><div class="barline"><i style="width:' + Math.min(100, save.xp / (save.level * 50) * 100) + '%"></i></div><p class="muted">Опыт: ' + save.xp + ' / ' + (save.level * 50) + '</p><p>Победы: ' + save.wins + '</p><button class="primary wide" data-action="train">Тренировка · 20 ✦</button>');
+    if (panel === 'artifactsPanel') open('Артефакты', '<div class="item"><span>🪶 ' + esc(save.artifact) + '<br><small>+5% к силе атаки</small></span><span class="tag">Надет</span></div><div class="item"><span>⚔️ ' + esc(save.weapon) + '<br><small>Обычное оружие</small></span><span class="tag">Надето</span></div><p class="muted">Экипировка действует в одиночных боях.</p>');
+    if (panel === 'bagPanel') open('Инвентарь', '<div class="item"><span>✦ Мора</span><b>' + save.coins + '</b></div><div class="item"><span>✨ Анемо-искры</span><b>' + save.sparks + '</b></div><div class="item"><span>🧪 Зелья</span><b>' + save.potions + '</b></div><button class="primary wide" data-action="potion">Купить зелье · 15 ✦</button>');
+    if (panel === 'questsPanel') open('Задания', '<div class="item"><span>✨ Собрать искры</span><b>' + (save.sparks >= 4 ? 'Выполнено' : save.sparks + '/4') + '</b></div><div class="item"><span>⚔️ Победить слаймов</span><b>' + (save.wins ? 'Выполнено' : 'Не выполнено') + '</b></div><p class="muted">За новые победы и собранные искры выдаётся опыт.</p>');
+    if (panel === 'worldPanel') open('Карта Тейвата', '<div class="regionlist"><div class="region active"><span>🌬️</span><div><b>Мондштадт</b><small>Открыт · город свободы</small></div></div><div class="region"><span>🪨</span><div><b>Ли Юэ</b><small>Скоро откроется</small></div></div><div class="region"><span>⚡</span><div><b>Инадзума</b><small>Скоро откроется</small></div></div><div class="region"><span>🌿</span><div><b>Сумеру</b><small>Скоро откроется</small></div></div><div class="region"><span>💧</span><div><b>Фонтейн</b><small>Скоро откроется</small></div></div></div>');
+    if (panel === 'battlePanel') open('Арена', '<p>Тренировочная арена против игровых противников-ботов.</p><p class="muted">Это не сетевой PvP: другие реальные игроки пока не подключены.</p><button class="primary wide" data-action="arena">Начать тренировочный бой</button>');
+  }));
+  content.addEventListener('click', e => {
+    const action = e.target.closest('[data-action]')?.dataset.action;
+    if (!action) return;
+    if (action === 'train') {
+      if (save.coins < 20) return open('Не хватает моры', '<p>Нужно 20 ✦. Собирай искры и побеждай противников.</p>');
+      save.coins -= 20; gainXP(25); open('Тренировка завершена', '<p>Получено 25 опыта. Текущий уровень: ' + save.level + '.</p>');
+    }
+    if (action === 'potion') {
+      if (save.coins < 15) return open('Не хватает моры', '<p>Нужно 15 ✦.</p>');
+      save.coins -= 15; save.potions++; persist(); refresh(); open('Покупка', '<p>Зелье добавлено в инвентарь.</p>');
+    }
+    if (action === 'arena') { modal.classList.remove('open'); startBattle(); }
+  });
+  function startBattle() {
+    save.hero = chosen; persist(); refresh();
+    document.getElementById('heroLabel').textContent = chosen + ' · Тренировочная арена';
+    show('game');
+    slimes.forEach((s, i) => { s.alive = true; s.hp = 2 + Math.floor(save.level / 3); s.x = 610 + i * 150; });
+    x = 130; y = 300; life = 100; gameEnded = false;
+    document.getElementById('health').style.width = '100%';
+    document.querySelector('.game-tip').textContent = 'Тренировочный бой: победи всех слаймов-ботов!';
+    draw();
+  }
+  const oldConfirm = document.getElementById('confirm').onclick;
+  document.getElementById('confirm').onclick = () => {
+    save.hero = chosen; persist(); refresh();
+    oldConfirm?.();
+  };
+  document.getElementById('menu').onclick = () => { refresh(); show('hub'); };
+  document.getElementById('exploreBtn').onclick = () => startBattle();
+  document.getElementById('onlineInfo').onclick = () => open('Онлайн-комнаты', '<div class="item"><span>Статус сервера</span><b style="color:#b36a42">Не подключён</b></div><p>Планируемый режим: комнаты на 2–4 путешественника. Один игрок создаёт комнату и отправляет друзьям код, остальные вводят его и присоединяются.</p><div class="panel"><h3>Создание комнаты</h3><label for="roomSize">Количество игроков</label><select id="roomSize" class="wide" disabled><option>2 игрока</option><option>3 игрока</option><option>4 игрока</option></select><button class="primary wide" disabled>Создать комнату</button><p class="muted">Кнопки станут доступны после подключения игрового сервера.</p></div><div class="panel"><h3>Вход по коду</h3><input class="wide" placeholder="Код комнаты" disabled><button class="secondary wide" disabled>Присоединиться</button></div><p class="muted">Пока доступны одиночное приключение и бои с ботами. Это окно — подготовка интерфейса, а не работающий онлайн.</p>');
+  const oldCollectedPush = collected.push.bind(collected);
+  collected.push = function(...items) { const before = collected.length; const result = oldCollectedPush(...items); if (collected.length > before) { save.sparks += collected.length - before; save.coins += 5 * (collected.length - before); gainXP(10 * (collected.length - before)); } return result; };
+  const oldFinish = document.querySelector('#game #again');
+  const finishObserver = new MutationObserver(() => {
+    const again = document.querySelector('#game #again');
+    if (again && !again.dataset.rewardBound) {
+      again.dataset.rewardBound = '1';
+      const panel = again.parentElement;
+      if (panel.querySelector('h2')?.textContent === 'Задание выполнено!') {
+        save.wins++; save.coins += 30; gainXP(40); persist();
+        const reward = document.createElement('p'); reward.textContent = 'Награда: +30 моры и +40 опыта. Прогресс сохранён!'; panel.insertBefore(reward, again);
+      }
+      again.onclick = () => { panel.remove(); startBattle(); };
+    }
+  });
+  finishObserver.observe(document.getElementById('game'), { childList: true, subtree: true });
+  refresh();
+})();
+</script>
+<script type="module">
+// Подключение Supabase и временной анонимной учётной записи игрока.
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+const supabase = createClient(
+  'https://phhgqumlqixepxqbjwub.supabase.co',
+  'sb_publishable_YRmnJA3YvKvOBYkKC8YfzQ_98XuJcsn'
+);
+window.teyvatSupabase = supabase;
+let onlineUser = null;
+try {
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
+  if (data.session) onlineUser = data.session.user;
+  else {
+    const result = await supabase.auth.signInAnonymously();
+    if (result.error) throw result.error;
+    onlineUser = result.data.user;
+  }
+  window.teyvatOnlineReady = true;
+} catch (error) {
+  console.error('Supabase connection:', error);
+  window.teyvatOnlineError = error.message || 'Не удалось подключиться';
+}
+const modalContent = document.getElementById('modalContent');
+const observer = new MutationObserver(() => {
+  if (!modalContent.textContent.includes('Онлайн-комнаты')) return;
+  let status = modalContent.querySelector('#teyvatConnectionStatus');
+  if (!status) {
+    status = document.createElement('p');
+    status.id = 'teyvatConnectionStatus';
+    status.className = 'muted';
+    modalContent.prepend(status);
+  }
+  status.textContent = window.teyvatOnlineReady
+    ? '🟢 Supabase подключён. Временный профиль игрока создан.'
+    : '🔴 Ошибка подключения: ' + (window.teyvatOnlineError || 'Подключаемся…');
+});
+observer.observe(modalContent, { childList: true, subtree: true, characterData: true });
+</script>
+</body>
+</html>
